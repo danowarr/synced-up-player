@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Synced Up Player</title>
+  <style>
+    body {
+      font-family: -apple-system, sans-serif;
+      background: #1a1a1a;
+      color: #eee;
+      padding: 24px;
+    }
+    h1 { font-size: 16px; font-weight: 500; margin: 0 0 16px; }
+    h2 { font-size: 13px; font-weight: 500; margin: 0 0 8px; color: #aaa; text-transform: uppercase; }
+    section {
+      border: 1px solid #333;
+      border-radius: 6px;
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+    input {
+      width: 100%;
+      padding: 8px;
+      box-sizing: border-box;
+      background: #2a2a2a;
+      border: 1px solid #444;
+      color: #eee;
+      border-radius: 4px;
+      margin-bottom: 12px;
+    }
+    button {
+      padding: 8px 16px;
+      margin-right: 8px;
+      border-radius: 4px;
+      border: 1px solid #555;
+      background: #333;
+      color: #eee;
+      cursor: pointer;
+    }
+    button:hover { background: #444; }
+    .status {
+      margin-top: 12px;
+      font-size: 13px;
+      color: #999;
+    }
+    #syncBanner {
+      padding: 10px 16px;
+      border-radius: 6px;
+      margin-bottom: 16px;
+      font-size: 13px;
+      background: #2a2a2a;
+      border: 1px solid #444;
+      color: #ccc;
+    }
+    #syncBanner.locked {
+      background: #3a2a10;
+      border-color: #a06a20;
+      color: #f0c070;
+    }
+    .nudge-btn.active {
+      background: #1e4a2a;
+      border-color: #2f8a4a;
+    }
+    .help {
+      font-size: 12px;
+      color: #777;
+      margin: 0 0 12px;
+    }
+    .volume-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 10px;
+    }
+    .volume-row label {
+      font-size: 12px;
+      color: #999;
+      min-width: 45px;
+    }
+    .volume-row input[type="range"] {
+      flex: 1;
+      margin-bottom: 0;
+    }
+  </style>
+</head>
+<body>
+  <h1>Synced Up Player</h1>
+
+  <div id="syncBanner">Sync: idle — load and play both streams to see stall-lock in action.</div>
+
+  <section>
+    <h2>Manual align</h2>
+    <p class="help">
+      Play both streams, then nudge whichever one is BEHIND — this
+      speeds it up slightly until you click again to bring it back to
+      normal speed. Listen for the two to line up on the same moment,
+      then release.
+    </p>
+    <button class="nudge-btn" id="tvNudgeBtn">Nudge TV ahead</button>
+    <button class="nudge-btn" id="radioNudgeBtn">Nudge radio ahead</button>
+  </section>
+
+  <section>
+    <h2>TV stream</h2>
+    <input id="tvUrlInput" type="text" placeholder="Paste your TV/proxy stream URL">
+    <div>
+      <button id="tvLoadBtn">Load</button>
+      <button id="tvPlayBtn">Play</button>
+      <button id="tvPauseBtn">Pause</button>
+      <button id="tvMuteBtn">Mute</button>
+      <button id="tvFullscreenBtn">Fullscreen</button>
+    </div>
+    <div class="volume-row">
+      <label for="tvVolumeSlider">Volume</label>
+      <input type="range" id="tvVolumeSlider" min="0" max="100" value="100">
+    </div>
+    <div class="status" id="tvStatus">Idle — nothing loaded yet.</div>
+  </section>
+
+  <section>
+    <h2>Radio stream</h2>
+    <input id="radioUrlInput" type="text" placeholder="Paste your radio stream URL">
+    <div>
+      <button id="radioLoadBtn">Load</button>
+      <button id="radioPlayBtn">Play</button>
+      <button id="radioPauseBtn">Pause</button>
+      <button id="radioMuteBtn">Mute</button>
+    </div>
+    <div class="volume-row">
+      <label for="radioVolumeSlider">Volume</label>
+      <input type="range" id="radioVolumeSlider" min="0" max="100" value="100">
+    </div>
+    <div class="status" id="radioStatus">Idle — nothing loaded yet.</div>
+  </section>
+
+  <script src="renderer.js"></script>
+</body>
+</html>

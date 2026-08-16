@@ -1,0 +1,63 @@
+{
+  "name": "synced-up-player",
+  "version": "0.1.0",
+  "description": "Local, on-device tool for syncing a TV stream and a radio stream. Bring-your-own-links, no server, no rebroadcasting.",
+  "main": "main.js",
+  "author": "danowarr",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/danowarr/synced-up-player.git"
+  },
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder",
+    "dist:win": "electron-builder --win",
+    "dist:linux": "electron-builder --linux"
+  },
+  "dependencies": {
+    "node-mpv": "^1.5.0"
+  },
+  "devDependencies": {
+    "electron": "^43.0.0",
+    "electron-builder": "^26.15.3"
+  },
+  "build": {
+    "appId": "com.danowarr.syncedupplayer",
+    "productName": "Synced Up Player",
+    "files": [
+      "main.js",
+      "preload.js",
+      "renderer.js",
+      "recorder.js",
+      "localServer.js",
+      "index.html",
+      "package.json",
+      "node_modules/**/*"
+    ],
+    "win": {
+      "target": "zip",
+      "extraResources": [
+        { "from": "vendor/mpv/win", "to": "mpv", "filter": ["**/*"] },
+        { "from": "vendor/ffmpeg/win", "to": "ffmpeg", "filter": ["**/*"] },
+        { "from": "LICENSE", "to": "LICENSE" },
+        { "from": "README.md", "to": "README.md" },
+        { "from": "third-party-licenses", "to": "third-party-licenses", "filter": ["**/*"] }
+      ]
+    },
+    "linux": {
+      "target": "tar.gz",
+      "category": "AudioVideo",
+      "extraResources": [
+        { "from": "vendor/mpv/linux", "to": "mpv", "filter": ["**/*"] },
+        { "from": "vendor/ffmpeg/linux", "to": "ffmpeg", "filter": ["**/*"] },
+        { "from": "LICENSE", "to": "LICENSE" },
+        { "from": "README.md", "to": "README.md" },
+        { "from": "third-party-licenses", "to": "third-party-licenses", "filter": ["**/*"] }
+      ]
+    },
+    "directories": {
+      "output": "dist"
+    }
+  }
+}

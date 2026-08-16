@@ -1,0 +1,28 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+out/
+build/
+
+# Local buffer data (recorder.js writes here at runtime — never commit)
+stream-buffers/
+
+# Vendored binaries (mpv/ffmpeg) — large, and each release should
+# consciously choose its version rather than committing a stale one
+vendor/*/win/
+vendor/*/mac/
+vendor/*/linux/
+
+# OS cruft
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+*.swp
+
+# Env files, if you switch from inline env vars to a .env file later
+.env
+.env.local
