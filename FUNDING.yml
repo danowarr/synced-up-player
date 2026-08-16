@@ -1,0 +1,8 @@
+# These only produce a working "Sponsor" button once each platform is
+# actually set up on your account (github.com/sponsors for the first
+# one) — an unconfigured entry here just won't show a button for that
+# platform, it won't error.
+github: danowarr
+# ko_fi: your-kofi-handle   # uncomment if you set one up — no KYC at
+                             # small scale, a lower-friction alternative
+                             # or complement to GitHub Sponsors

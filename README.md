@@ -1,10 +1,26 @@
 # Synced Up Player
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Latest release](https://img.shields.io/github/v/release/danowarr/synced-up-player?include_prereleases)](https://github.com/danowarr/synced-up-player/releases)
+[![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux-informational)](#getting-started)
+[![Built with Electron](https://img.shields.io/badge/Electron-43-9FEAF9?logo=electron&logoColor=black)](https://www.electronjs.org/)
+
 A local, on-device tool for keeping a TV stream and a radio broadcast
 stream synchronized during a live sports game (or anything else where
 you're watching one feed and listening to a separate commentary feed).
 Bring-your-own-links — you provide the stream URLs, the app never
 fetches, hosts, or rebroadcasts anything itself.
+
+<!--
+Add a real screenshot or short GIF here once you have one — this is
+genuinely the single highest-impact thing you can add to this README.
+Save it to docs/screenshot.png (or .gif) and uncomment the line below.
+A quick screen recording of a sync session (stall-lock catching a
+buffer, or the nudge-align in action) would say more than any amount
+of prose.
+
+![Screenshot](docs/screenshot.png)
+-->
 
 ## Features
 
