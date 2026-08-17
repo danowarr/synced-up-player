@@ -11,7 +11,8 @@ you're watching one feed and listening to a separate commentary feed).
 Bring-your-own-links — you provide the stream URLs, the app never
 fetches, hosts, or rebroadcasts anything itself.
 
-<![Screenshot](docs/screenshot.png)>
+![Screenshot](docs/screenshot.png)
+
 
 ## Features
 
