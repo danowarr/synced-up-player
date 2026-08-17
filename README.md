@@ -11,16 +11,7 @@ you're watching one feed and listening to a separate commentary feed).
 Bring-your-own-links — you provide the stream URLs, the app never
 fetches, hosts, or rebroadcasts anything itself.
 
-<!--
-Add a real screenshot or short GIF here once you have one — this is
-genuinely the single highest-impact thing you can add to this README.
-Save it to docs/screenshot.png (or .gif) and uncomment the line below.
-A quick screen recording of a sync session (stall-lock catching a
-buffer, or the nudge-align in action) would say more than any amount
-of prose.
-
-![Screenshot](docs/screenshot.png)
--->
+<![Screenshot](docs/screenshot.png)>
 
 ## Features
 
