@@ -141,6 +141,7 @@ function handleBufferChange(label, isBuffering, latencyMs = 0, recoveryAdvanceSe
       if (recoveryAdvanceSeconds > 0 && typeof otherPlayer.seek === 'function') {
         console.log(`[sync] ${label} recovered — catching ${other} up ${recoveryAdvanceSeconds.toFixed(2)}s before resuming`);
         otherPlayer.seek(recoveryAdvanceSeconds)
+        otherPlayer.play()
           .catch((err) => {
             // Not fatal — resuming still works fine without this
             // correction, it's just a bit less precise.

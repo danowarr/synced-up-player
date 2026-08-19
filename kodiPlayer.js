@@ -51,7 +51,7 @@
 
 const EventEmitter = require('events');
 
-const POLL_INTERVAL_MS = 500;
+const POLL_INTERVAL_MS = 200;
 const CACHE_HEALTHY_THRESHOLD = 95; // percent; below this counts as "possibly buffering"
 const STALL_CONFIRM_POLLS = 2; // consecutive non-advancing polls required before declaring a real stall
 
@@ -157,22 +157,17 @@ class KodiPlayer extends EventEmitter {
       // recovery needs below. Computed BEFORE lastPositionMs gets
       // overwritten, using the true previous value.
       const positionAdvanceSeconds = (positionMs !== null && this.lastPositionMs !== null)
-        ? (positionMs - this.lastPositionMs) / 1000
+        ? (POLL_INTERVAL_MS - (positionMs - this.lastPositionMs) + this.prestallLatency) / 1000
         : 0;
 
       if (positionStalled) {
         if (this.stalledPollCount === 0) {
-          // First frozen sample. A fully-frozen reading carries ZERO
-          // information about when within [previousPollTime, pollTime]
-          // the freeze actually began — "froze right after the last
-          // good poll" and "froze right before this one" produce
-          // identical data, so no formula on these two samples alone
-          // can tell them apart. The midpoint is the best unbiased
-          // single-point estimate available without polling more often
-          // or a genuine push-based signal from Kodi (which doesn't
-          // exist for buffering — see the file-level comment).
-          const prev = this.previousPollTime || pollTime;
-          this.stallStartedAt = prev + (pollTime - prev) / 2;
+          // First frozen sample. 
+          const preStallPosition = this.beforeLastPositionMs;
+          const stallPosition = this.lastPositionMs;
+          const preStallTime = this.beforePreviousPollTime;
+          const stallTime = this.previousPollTime
+          this.prestallLatency = preStallPosition + (stallTime - preStallTime) - stallPosition;
         }
         this.stalledPollCount += 1;
       } else {
@@ -198,7 +193,7 @@ class KodiPlayer extends EventEmitter {
       // backward by this amount once it pauses it.
       const bufferingLatencyMs =
         (bufferingLike && !this.lastState.bufferingLike && this.stallStartedAt)
-          ? pollTime - this.stallStartedAt
+          ? pollTime - this.stallStartedAt 
           : 0;
 
       // RECOVERY correction: the mirror case, but NOT an estimate —
@@ -210,9 +205,11 @@ class KodiPlayer extends EventEmitter {
       // stream FORWARD by this amount right before resuming it.
       const recoveryAdvanceSeconds =
         (!bufferingLike && this.lastState.bufferingLike)
-          ? positionAdvanceSeconds
+          ? positionAdvanceSeconds 
           : 0;
 
+      this.beforeLastPositionMs = this.lastPositionMs;
+      this.beforePreviousPollTime = this.previousPollTime
       this.previousPollTime = pollTime;
       this.lastPositionMs = positionMs;
 
