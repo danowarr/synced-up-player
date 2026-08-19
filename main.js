@@ -389,6 +389,8 @@ registerPlayerHandlers('radio');
 // simultaneously while using the Kodi backend. Worth cleaning up later,
 // not blocking for a first working version.
 ipcMain.handle('tv-connect-kodi', async (_event, { host, port, username, password }) => {
+  recorders['tv'].stop()
+  try{ await players['tv'].quit(); } catch (_) {}
   const kodi = new KodiPlayer({ host, port, username, password });
   await kodi.connect(); // throws with a clear message if this fails
   players.tv = kodi;
