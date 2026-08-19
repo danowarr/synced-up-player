@@ -81,6 +81,27 @@
       flex: 1;
       margin-bottom: 0;
     }
+    .backend-toggle {
+      display: flex;
+      gap: 16px;
+      margin-bottom: 12px;
+      font-size: 13px;
+      color: #ccc;
+    }
+    .backend-toggle label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+    }
+    .kodi-fields {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 8px;
+    }
+    .kodi-fields input {
+      margin-bottom: 8px;
+    }
   </style>
 </head>
 <body>
@@ -102,9 +123,44 @@
 
   <section>
     <h2>TV stream</h2>
-    <input id="tvUrlInput" type="text" placeholder="Paste your TV/proxy stream URL">
+
+    <div class="backend-toggle">
+      <label for="tvBackend">Backend:</label>
+      <select id="tvBackend">
+        <option value="mpv">mpv (paste a link)</option>
+        <option value="kodi">Kodi (connect to a running instance)</option>
+      </select>
+    </div>
+
+    <div id="tvMpvFields">
+      <input id="tvUrlInput" type="text" placeholder="Paste your TV/proxy stream URL">
+      <div>
+        <button id="tvLoadBtn">Load</button>
+      </div>
+    </div>
+
+    <div id="tvKodiFields" class="kodi-fields" style="display: none;">
+      <input id="kodiHost" type="text" placeholder="Host (e.g. 127.0.0.1)">
+      <input id="kodiPort" type="text" placeholder="Port" value="8080">
+      <input id="kodiUsername" type="text" placeholder="Username (if set)">
+      <input id="kodiPassword" type="password" placeholder="Password (if set)">
+      <div style="grid-column: 1 / -1;">
+        <p class="help" style="margin-bottom: 8px;">
+          Start playback in Kodi first, then Connect — this doesn't
+          load anything, it just takes over control of whatever's
+          already playing there. Kodi handles its own buffering (and
+          any DRM-protected content you've set up there); no local
+          buffer is built for this backend.
+        </p>
+        <button id="kodiConnectBtn">Connect</button>
+        <label style="font-size: 12px; color: #ccc; margin-left: 12px;">
+          <input type="checkbox" id="kodiRememberCheckbox"> Remember (encrypted)
+        </label>
+        <a href="#" id="kodiForgetLink" style="font-size: 12px; color: #888; margin-left: 12px;">Forget saved</a>
+      </div>
+    </div>
+
     <div>
-      <button id="tvLoadBtn">Load</button>
       <button id="tvPlayBtn">Play</button>
       <button id="tvPauseBtn">Pause</button>
       <button id="tvMuteBtn">Mute</button>

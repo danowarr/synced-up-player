@@ -10,6 +10,8 @@ const fs = require('fs');
 const mpvAPI = require('node-mpv');
 const { StreamRecorder } = require('./recorder');
 const { startLocalServer } = require('./localServer');
+const { KodiPlayer } = require('./kodiPlayer');
+const { saveKodiCredentials, loadKodiCredentials, clearKodiCredentials } = require('./credentialStore');
 
 // Where mpv actually comes from, in priority order:
 //   1. A bundled binary shipped alongside a packaged build (resources/mpv/).
@@ -88,7 +90,7 @@ function otherLabel(label) {
 // Called whenever mpv reports a change in its 'paused-for-cache' property
 // for a given player — mpv sets this to true itself whenever it stalls
 // out waiting for more data, independent of anything we command.
-function handleBufferChange(label, isBuffering) {
+function handleBufferChange(label, isBuffering, latencyMs = 0, recoveryAdvanceSeconds = 0) {
   bufferState[label] = isBuffering;
   const other = otherLabel(label);
   const otherPlayer = players[other];
@@ -105,6 +107,23 @@ function handleBufferChange(label, isBuffering) {
       otherPlayer.pause();
       autoPaused[other] = true;
       console.log(`[sync] ${label} buffering — auto-pausing ${other}`);
+
+      // If detecting this stall took real measurable time (currently
+      // only Kodi reports this — mpv's own paused-for-cache arrives
+      // near-instantly via property observation, so it has nothing
+      // meaningful to correct for), the OTHER stream kept playing that
+      // whole time and is now ahead by roughly that amount. Seek it
+      // back to correct for our own detection delay, not just the
+      // underlying stall itself.
+      if (latencyMs > 0 && typeof otherPlayer.seek === 'function') {
+        const offsetSeconds = -(latencyMs / 1000);
+        otherPlayer.seek(offsetSeconds).catch((err) => {
+          // Not fatal — the stall-lock pause/resume still works fine
+          // without this correction, it's just a bit less precise.
+          console.warn(`[sync] failed to seek ${other} back ${-offsetSeconds}s to correct for detection latency:`, err.message);
+        });
+        console.log(`[sync] correcting ${other} back ${-offsetSeconds}s for ${label}'s detection latency`);
+      }
     }
   } else {
     // label recovered. If our own sync logic is what's holding the
@@ -112,9 +131,26 @@ function handleBufferChange(label, isBuffering) {
     // autoPaused[other] was never set to true for it, so this correctly
     // leaves it alone.)
     if (autoPaused[other]) {
-      otherPlayer.play();
       autoPaused[other] = false;
-      console.log(`[sync] ${label} recovered — resuming ${other}`);
+
+      // Unlike the onset correction above, this isn't an estimate —
+      // recoveryAdvanceSeconds is the exact distance the source moved
+      // before we noticed it recovering (see kodiPlayer.js's _poll()).
+      // Seek BEFORE resuming, so playback comes back already caught up
+      // instead of visibly jumping right after resuming.
+      if (recoveryAdvanceSeconds > 0 && typeof otherPlayer.seek === 'function') {
+        console.log(`[sync] ${label} recovered — catching ${other} up ${recoveryAdvanceSeconds.toFixed(2)}s before resuming`);
+        otherPlayer.seek(recoveryAdvanceSeconds)
+          .catch((err) => {
+            // Not fatal — resuming still works fine without this
+            // correction, it's just a bit less precise.
+            console.warn(`[sync] failed to seek ${other} forward ${recoveryAdvanceSeconds.toFixed(2)}s to catch up:`, err.message);
+          })
+          .finally(() => otherPlayer.play());
+      } else {
+        console.log(`[sync] ${label} recovered — resuming ${other}`);
+        otherPlayer.play();
+      }
     }
   }
 
@@ -196,6 +232,37 @@ function createMpvPlayer(label) {
   }
 }
 
+// Wires up status forwarding + the sync engine for whichever player
+// backend is behind a given label. Called once per mpv instance at
+// startup below, and called again whenever a KodiPlayer is connected
+// for 'tv' — same function either way, since both backends emit the
+// same 'statuschange' shape.
+function attachPlayerListeners(label, player) {
+  // 'paused-for-cache' isn't observed by default on mpv — ask it to
+  // start reporting it. KodiPlayer has no such method (it just always
+  // includes cachepercentage in its own poll), so this is skipped for
+  // that backend automatically.
+  if (typeof player.observeProperty === 'function') {
+    player.observeProperty('paused-for-cache', 1);
+  }
+
+  player.on('statuschange', (status) => {
+    if (mainWindow) mainWindow.webContents.send(`${label}-status`, status);
+
+    if (typeof status.pause === 'boolean') {
+      pausedState[label] = status.pause;
+    }
+
+    if (typeof status['paused-for-cache'] === 'boolean') {
+      handleBufferChange(label, status['paused-for-cache'], status.bufferingLatencyMs || 0, status.recoveryAdvanceSeconds || 0);
+    }
+  });
+
+  player.on('stopped', () => {
+    if (mainWindow) mainWindow.webContents.send(`${label}-status`, { stopped: true });
+  });
+}
+
 app.whenReady().then(async () => {
   createWindow();
 
@@ -212,33 +279,10 @@ app.whenReady().then(async () => {
   players.tv = createMpvPlayer('tv');
   players.radio = createMpvPlayer('radio');
 
-  // Forward each player's status changes to the renderer under its own
-  // channel name so the UI can show TV and radio state separately, and
-  // route buffering state into the stall-lock handler above.
   for (const label of ['tv', 'radio']) {
     const player = players[label];
     if (!player) continue; // construction failed and already logged why
-
-    // 'paused-for-cache' isn't observed by default — ask mpv to start
-    // reporting it. id=1 is fine reused across both instances since each
-    // mpv instance tracks its own observedIDs independently.
-    player.observeProperty('paused-for-cache', 1);
-
-    player.on('statuschange', (status) => {
-      if (mainWindow) mainWindow.webContents.send(`${label}-status`, status);
-
-      if (typeof status.pause === 'boolean') {
-        pausedState[label] = status.pause;
-      }
-
-      if (typeof status['paused-for-cache'] === 'boolean') {
-        handleBufferChange(label, status['paused-for-cache']);
-      }
-    });
-
-    player.on('stopped', () => {
-      if (mainWindow) mainWindow.webContents.send(`${label}-status`, { stopped: true });
-    });
+    attachPlayerListeners(label, player);
   }
 });
 
@@ -252,6 +296,9 @@ function registerPlayerHandlers(label) {
   ipcMain.handle(`${label}-load`, async (_event, url) => {
     const player = players[label];
     if (!player) throw new Error(`mpv (${label}) is not running — check the main process console for why.`);
+    if (typeof player.load !== 'function') {
+      throw new Error(`This backend doesn't support Load — start playback there directly, then Connect.`);
+    }
 
     // Don't play the raw URL directly. Instead, start (or restart) a
     // local recording of it — see recorder.js — and once there's enough
@@ -329,6 +376,42 @@ function registerPlayerHandlers(label) {
 
 registerPlayerHandlers('tv');
 registerPlayerHandlers('radio');
+
+// TV-only: swaps players.tv from the mpv instance over to a KodiPlayer
+// controlling an already-running Kodi install. No recorder/localServer
+// involved — Kodi manages its own buffering entirely, which is the
+// whole reason this backend exists in the first place.
+//
+// Known rough edge: the original mpv 'tv' process keeps running idle in
+// the background rather than being torn down — switching back to mpv
+// later is cheap, but it does mean an empty mpv window may be visible
+// simultaneously while using the Kodi backend. Worth cleaning up later,
+// not blocking for a first working version.
+ipcMain.handle('tv-connect-kodi', async (_event, { host, port, username, password }) => {
+  const kodi = new KodiPlayer({ host, port, username, password });
+  await kodi.connect(); // throws with a clear message if this fails
+  players.tv = kodi;
+  attachPlayerListeners('tv', kodi);
+  console.log(`[kodi] connected to ${host}:${port}`);
+  return { ok: true };
+});
+
+// Credential persistence — separate from connecting itself. The
+// renderer decides when to save (only after a successful connect, and
+// only if the user opted in), never automatically.
+ipcMain.handle('kodi-save-credentials', async (_event, creds) => {
+  await saveKodiCredentials(creds); // throws its own clear error if unavailable — see credentialStore.js
+  return { ok: true };
+});
+
+ipcMain.handle('kodi-load-credentials', async () => {
+  return loadKodiCredentials(); // null if nothing saved, or if decryption failed
+});
+
+ipcMain.handle('kodi-clear-credentials', async () => {
+  clearKodiCredentials();
+  return { ok: true };
+});
 
 app.on('window-all-closed', async () => {
   for (const label of ['tv', 'radio']) {

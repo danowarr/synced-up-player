@@ -31,6 +31,8 @@
       "renderer.js",
       "recorder.js",
       "localServer.js",
+      "kodiPlayer.js",
+      "credentialStore.js",
       "index.html",
       "package.json",
       "node_modules/**/*"

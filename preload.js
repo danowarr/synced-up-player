@@ -25,7 +25,17 @@ function playerAPI(label) {
 }
 
 contextBridge.exposeInMainWorld('api', {
-  tv: playerAPI('tv'),
+  tv: {
+    ...playerAPI('tv'),
+    // TV-only — radio has no Kodi-backend equivalent, so this doesn't
+    // belong in the generic playerAPI() factory above.
+    connectKodi: (host, port, username, password) =>
+      ipcRenderer.invoke('tv-connect-kodi', { host, port, username, password }),
+    saveKodiCredentials: (host, port, username, password) =>
+      ipcRenderer.invoke('kodi-save-credentials', { host, port, username, password }),
+    loadKodiCredentials: () => ipcRenderer.invoke('kodi-load-credentials'),
+    clearKodiCredentials: () => ipcRenderer.invoke('kodi-clear-credentials'),
+  },
   radio: playerAPI('radio'),
   // Global — not per-player — since sync status describes the
   // relationship between both streams, not either one alone.
