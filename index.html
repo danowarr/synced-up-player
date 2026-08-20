@@ -95,11 +95,12 @@
       cursor: pointer;
     }
     .kodi-fields {
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 8px;
+      margin-bottom: 8px;
     }
     .kodi-fields input {
+      margin-bottom: 8px;
+    }
+    .tv-mpv-fields {
       margin-bottom: 8px;
     }
   </style>
@@ -127,13 +128,16 @@
     <div class="backend-toggle">
       <label for="tvBackend">Backend:</label>
       <select id="tvBackend">
-        <option value="mpv">mpv (paste a link)</option>
-        <option value="kodi">Kodi (connect to a running instance)</option>
+        <option value="mpv">mpv</option>
+        <option value="kodi">Kodi</option>
       </select>
     </div>
 
-    <div id="tvMpvFields">
+    <div id="tvMpvFields" class="tv-mpv-fields">
       <input id="tvUrlInput" type="text" placeholder="Paste your TV/proxy stream URL">
+      <p class="help" style="margin-bottom: 8px;">
+        Paste in a raw hls or raw MPEG link and press load.
+      </p>
       <div>
         <button id="tvLoadBtn">Load</button>
       </div>
@@ -144,7 +148,7 @@
       <input id="kodiPort" type="text" placeholder="Port" value="8080">
       <input id="kodiUsername" type="text" placeholder="Username (if set)">
       <input id="kodiPassword" type="password" placeholder="Password (if set)">
-      <div style="grid-column: 1 / -1;">
+      <div>
         <p class="help" style="margin-bottom: 8px;">
           Start playback in Kodi first, then Connect — this doesn't
           load anything, it just takes over control of whatever's
@@ -152,11 +156,11 @@
           any DRM-protected content you've set up there); no local
           buffer is built for this backend.
         </p>
-        <button id="kodiConnectBtn">Connect</button>
-        <label style="font-size: 12px; color: #ccc; margin-left: 12px;">
-          <input type="checkbox" id="kodiRememberCheckbox"> Remember (encrypted)
+        <label style="font-size: 12px; color: #ccc; display: flex; margin-top: 8px; align-items: center;">
+          <button id="kodiConnectBtn">Connect</button>
+          <input type="checkbox" id="kodiRememberCheckbox" style="width: 16px; height: 16px; margin-right: 8px; margin-top: 8px;"> Remember (encrypted)
+          <a href="#" id="kodiForgetLink" style="font-size: 12px; color: #888; margin-left: 8px;">Forget saved</a>
         </label>
-        <a href="#" id="kodiForgetLink" style="font-size: 12px; color: #888; margin-left: 12px;">Forget saved</a>
       </div>
     </div>
 
