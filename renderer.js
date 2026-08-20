@@ -88,11 +88,13 @@ wireUpPlayer('radio');
 const tvMpvFields = document.getElementById('tvMpvFields');
 const tvKodiFields = document.getElementById('tvKodiFields');
 const tvStatusDiv = document.getElementById('tvStatus');
+const tvFullscreenBtn = document.getElementById('tvFullscreenBtn')
 
 function updateTvBackendFields() {
   const useKodi = document.getElementById('tvBackend').value === 'kodi';
   tvMpvFields.style.display = useKodi ? 'none' : '';
   tvKodiFields.style.display = useKodi ? '' : 'none';
+  tvFullscreenBtn.style.display = useKodi ? 'none' : '';
 }
 
 document.getElementById('tvBackend').addEventListener('change', updateTvBackendFields);

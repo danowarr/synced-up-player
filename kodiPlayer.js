@@ -281,6 +281,9 @@ class KodiPlayer extends EventEmitter {
   }
 
   async cycleProperty(property) {
+    // This is removed from the UI because it doesn't do what I was expecting.
+    // Instead of toggling fullscreen mode for kodi it toggles fullscreen mode
+    // within kodi.
     if (property === 'fullscreen') {
       await this._call('GUI.SetFullscreen', { fullscreen: 'toggle' });
     }
