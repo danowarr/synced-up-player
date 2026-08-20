@@ -1,0 +1,168 @@
+# Release pipeline: push a tag matching v*.*.* (e.g. v0.2.0) and this
+# builds both platforms and publishes a GitHub Release with the
+# artifacts attached, matching the manual process already documented
+# in the main README's "Building a release" section.
+#
+# ONE-TIME SETUP REQUIRED before this works: see the build-linux job's
+# "Download mpv" step below. There's no automatable source for the
+# Linux mpv binary (it was compiled from source by hand — see
+# third-party-licenses/README.md) — you need to host that build
+# yourself and set MPV_LINUX_BINARY_URL as a repository variable
+# (Settings -> Secrets and variables -> Actions -> Variables tab).
+# Windows needs no such setup — both its binaries come from stable,
+# automatable sources.
+#
+# Windows and Linux build on their own native runner, not cross-built —
+# this isn't a style choice, it's the executable-bit bug from earlier:
+# NTFS can't preserve a Linux binary's +x flag, so a Linux tar.gz built
+# on a Windows host can silently ship a broken mpv/ffmpeg inside it.
+
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: write # needed for the final job to create a GitHub Release
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm install
+
+      # Official upstream mpv CI build (not a community build) — this
+      # specific one is LGPL-2.1, confirmed in third-party-licenses/
+      # README.md. Pinned to an exact version/URL, so this step is
+      # fully reproducible until you deliberately bump the version.
+      - name: Download mpv
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path vendor/mpv/win
+          Invoke-WebRequest -Uri "https://github.com/mpv-player/mpv/releases/download/v0.41.0/mpv-v0.41.0-x86_64-pc-windows-msvc.zip" -OutFile mpv.zip
+          Expand-Archive -Path mpv.zip -DestinationPath vendor/mpv/win -Force
+
+      # gyan.dev's "essentials" build, GPL-3.0 (confirmed in
+      # third-party-licenses/README.md). NOTE: this URL is a rolling
+      # "always latest essentials build" alias, not pinned to a
+      # specific version — unlike the mpv download above, the exact
+      # ffmpeg build this pulls in CAN change between releases without
+      # anything here noticing. After a real release, check this job's
+      # log for the "ffmpeg version" line and update the version record
+      # in third-party-licenses/README.md if it's changed — that record
+      # doesn't update itself.
+      - name: Download ffmpeg
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path vendor/ffmpeg/win
+          Invoke-WebRequest -Uri "https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip" -OutFile ffmpeg.zip
+          Expand-Archive -Path ffmpeg.zip -DestinationPath ffmpeg_extracted -Force
+          $ffmpegExe = Get-ChildItem -Path ffmpeg_extracted -Filter "ffmpeg.exe" -Recurse | Select-Object -First 1
+          Copy-Item $ffmpegExe.FullName -Destination vendor/ffmpeg/win/ffmpeg.exe
+          ffmpeg_extracted\*\bin\ffmpeg.exe -version | Select-Object -First 1
+
+      - name: Build
+        run: npm run dist:win
+
+      - name: Checksum
+        shell: pwsh
+        run: |
+          Get-ChildItem dist/*.zip | ForEach-Object {
+            $hash = Get-FileHash $_.FullName -Algorithm SHA256
+            "$($hash.Hash)  $($_.Name)" | Out-File -Append dist/checksums-windows.txt
+          }
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-build
+          path: |
+            dist/*.zip
+            dist/checksums-windows.txt
+
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm install
+
+      # Static build, GPL-3.0. The exact URL/asset naming for this
+      # provider can change over time — if this step starts failing,
+      # that's the first thing to check and update, not a sign
+      # something else broke.
+      - name: Download ffmpeg
+        run: |
+          mkdir -p vendor/ffmpeg/linux
+          curl -L -o ffmpeg.tar.xz "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-linux64-gpl.tar.xz"
+          tar -xf ffmpeg.tar.xz
+          find . -type f -path "*/bin/ffmpeg" -exec cp {} vendor/ffmpeg/linux/ffmpeg \;
+          chmod +x vendor/ffmpeg/linux/ffmpeg
+          vendor/ffmpeg/linux/ffmpeg -version | head -1
+
+      # See the file-level comment at the top — this is the one piece
+      # that can't be automated end-to-end. MPV_LINUX_BINARY_URL must
+      # point at a binary YOU already compiled and uploaded somewhere
+      # stable (see third-party-licenses/README.md for the exact
+      # commit/build details to keep that record accurate as you update
+      # this over time).
+      - name: Download mpv
+        run: |
+          if [ -z "${{ vars.MPV_LINUX_BINARY_URL }}" ]; then
+            echo "::error::MPV_LINUX_BINARY_URL repository variable is not set — see the comment at the top of this workflow file."
+            exit 1
+          fi
+          mkdir -p vendor/mpv/linux
+          curl -L -o vendor/mpv/linux/mpv "${{ vars.MPV_LINUX_BINARY_URL }}"
+          chmod +x vendor/mpv/linux/mpv
+
+      - name: Build
+        run: npm run dist:linux
+
+      - name: Checksum
+        run: |
+          cd dist
+          sha256sum *.tar.gz > checksums-linux.txt
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux-build
+          path: |
+            dist/*.tar.gz
+            dist/checksums-linux.txt
+
+  release:
+    needs: [build-windows, build-linux]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      # prerelease: true matches the deliberate "stay in 0.x, keep this
+      # flagged as pre-release" decision from earlier — flip this once
+      # the project is actually ready to call a version stable.
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          prerelease: true
+          files: |
+            artifacts/windows-build/*.zip
+            artifacts/windows-build/checksums-windows.txt
+            artifacts/linux-build/*.tar.gz
+            artifacts/linux-build/checksums-linux.txt
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
