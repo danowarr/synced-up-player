@@ -1,6 +1,6 @@
 {
   "name": "synced-up-player",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Local, on-device tool for syncing a TV stream and a radio stream. Bring-your-own-links, no server, no rebroadcasting.",
   "main": "main.js",
   "author": "danowarr",
