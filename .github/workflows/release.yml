@@ -121,12 +121,8 @@ jobs:
       # this over time).
       - name: Download mpv
         run: |
-          if [ -z "${{ vars.MPV_LINUX_BINARY_URL }}" ]; then
-            echo "::error::MPV_LINUX_BINARY_URL repository variable is not set — see the comment at the top of this workflow file."
-            exit 1
-          fi
           mkdir -p vendor/mpv/linux
-          curl -L -o vendor/mpv/linux/mpv "${{ vars.MPV_LINUX_BINARY_URL }}"
+          curl -L -o vendor/mpv/linux/mpv "https://github.com/danowarr/synced-up-player/releases/download/v0.1.0-linux-mpv/mpv-from-source"
           chmod +x vendor/mpv/linux/mpv
 
       - name: Build
