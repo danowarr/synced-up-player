@@ -122,7 +122,7 @@ jobs:
       - name: Download mpv
         run: |
           mkdir -p vendor/mpv/linux
-          curl -L -o vendor/mpv/linux/mpv "https://github.com/danowarr/synced-up-player/releases/download/v0.1.0-linux-mpv/mpv-from-source"
+          curl -L -o vendor/mpv/linux/mpv "${{ vars.MPV_LINUX_BINARY_URL }}"
           chmod +x vendor/mpv/linux/mpv
 
       - name: Build
