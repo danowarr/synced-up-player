@@ -68,7 +68,7 @@ jobs:
           Expand-Archive -Path ffmpeg.zip -DestinationPath ffmpeg_extracted -Force
           $ffmpegExe = Get-ChildItem -Path ffmpeg_extracted -Filter "ffmpeg.exe" -Recurse | Select-Object -First 1
           Copy-Item $ffmpegExe.FullName -Destination vendor/ffmpeg/win/ffmpeg.exe
-          ffmpeg_extracted\*\bin\ffmpeg.exe -version | Select-Object -First 1
+          & vendor\ffmpeg\win\ffmpeg.exe -version | Select-Object -First 1
 
       - name: Build
         run: npm run dist:win
@@ -122,7 +122,7 @@ jobs:
       - name: Download mpv
         run: |
           mkdir -p vendor/mpv/linux
-          curl -L -o vendor/mpv/linux/mpv "https://github.com/danowarr/synced-up-player/releases/download/v0.1.0-linux-mpv/mpv-from-source"
+          curl -L -o vendor/mpv/linux/mpv "${{ vars.MPV_LINUX_BINARY_URL }}"
           chmod +x vendor/mpv/linux/mpv
 
       - name: Build
